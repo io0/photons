@@ -1,10 +1,23 @@
 <!DOCTYPE html>
 <html>
-<head>
-	<title>Photon Animation with P5.js</title>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-	<script src="sketch.js"></script>
-</head>
-<body>
-</body>
+  <head>
+    <title>Photon Animation with P5.js</title>
+
+    <!-- add a button that calls increment -->
+    <button onclick="decrementCentralFreq()">-</button>
+    <button onclick="incrementCentralFreq()">+</button>
+    <!-- slider that calls changeCavityLength -->
+    <input
+      type="range"
+      min="300"
+      max="2000"
+      value="100"
+      class="slider"
+      id="myRange"
+      oninput="changeCavityLength()"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="sketch.js"></script>
+  </head>
+  <body></body>
 </html>

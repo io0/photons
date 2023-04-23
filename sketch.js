@@ -41,9 +41,9 @@ class Wave {
   constructor(
     w,
     highestFrequency,
+    velocity = 0.1,
     startPos = height / 2,
-    amplitude = 100,
-    velocity = 0.1
+    amplitude = 50
   ) {
     // c/wavelength = frequency
     // frequency * 2pi = angular frequency
@@ -56,6 +56,7 @@ class Wave {
     }
     this.y = [];
     this.w = w;
+    this.velocity = velocity;
     this.k = w / velocity;
     let wavelength = (2 * Math.PI) / this.k;
     // this.w = ((2 * Math.PI) / wavelength) * velocity;
@@ -64,9 +65,15 @@ class Wave {
     this.startPos = startPos;
     this.amplitude = amplitude;
     this.t = 0;
+    this.highestFrequency = highestFrequency;
     // a color between pink and blue depending on the wavelength
     this.color = frequencyToPastelRgb(w / highestFrequency);
     // this.color
+  }
+  setFrequency(w) {
+    this.w = w;
+    this.k = w / this.velocity;
+    this.color = frequencyToPastelRgb(w / this.highestFrequency);
   }
   update() {
     this.t += deltaTime;
@@ -138,38 +145,68 @@ class Photon {
 
 let photon;
 let waves;
-let N = 10;
-let velocity = 0.1;
+let forwardWaves = [];
+let backwardWaves = [];
+let N = 8;
+let velocity = 0.2;
 let d, wf, w0;
-let maxFreq = 0.01;
+let maxFreq = 0.02;
+let Nfundamental = 2;
+
+// add a button to increment the central frequency
+function incrementCentralFreq() {
+  Nfundamental += 1;
+  w0 = Nfundamental * wf;
+
+  for (let i = 0; i < waves.length; i++) {
+    waves[i].setFrequency(i * wf + w0);
+  }
+}
+
+function decrementCentralFreq() {
+  Nfundamental -= 1;
+  w0 = Nfundamental * wf;
+  for (let i = 0; i < waves.length; i++) {
+    waves[i].setFrequency(i * wf + w0);
+  }
+}
+
+let slider = document.getElementById("myRange");
+function changeCavityLength() {
+  // slider to change the cavity length
+  d = slider.value;
+  wf = (velocity * Math.PI) / d;
+  w0 = Nfundamental * wf;
+  for (let i = 0; i < forwardWaves.length; i++) {
+    forwardWaves[i].setFrequency(i * wf + w0);
+    backwardWaves[i].setFrequency(i * wf + w0);
+  }
+
+  console.log({ maxFreq: N * wf + w0 });
+}
+
 function setup() {
-  d = width / 0.2; // cavity length
+  d = width / 0.1; // cavity length
   wf = (velocity * Math.PI) / d; // fundamental frequency
 
-  w0 = 0 * wf; // central frequency
+  w0 = Nfundamental * wf; // central frequency
   createCanvas(800, 600);
   photon = new Photon(0, height / 2, 200, 100, 50);
   // create 10 waves
   waves = [];
-  console.log({ maxFreq });
+  console.log({ maxFreq: N * wf });
   for (let i = -N; i < N; i++) {
-    waves.push(new Wave(i * wf + w0, maxFreq));
+    let forward = new Wave(i * wf + w0, maxFreq, velocity);
+    let backward = new Wave(i * wf + w0, maxFreq, -velocity);
+    // waves.push({ forward, backward });
+    forwardWaves.push(forward);
+    backwardWaves.push(backward);
   }
+  console.log(waves);
 }
-
-function draw() {
-  // background(255, 255, 255);
-  background(20, 0, 80);
-  // photon.update();
-  // photon.show();
-  let sumX = waves[0].x;
-
-  // update and show waves
-  for (let i = 0; i < waves.length; i++) {
-    waves[i].update();
-    waves[i].show();
-  }
-  let intensity = sumX.map((x, i) => {
+function sumWaves(waves) {
+  let X = waves[0].x;
+  let linePoints = X.map((x, i) => {
     let y = 0;
     waves.forEach((wave) => {
       y += wave.linePoints[i].y - wave.startPos;
@@ -177,5 +214,25 @@ function draw() {
     y = y / waves.length + height / 2;
     return createVector(x, y);
   });
+  return linePoints;
+}
+
+function draw() {
+  // background(255, 255, 255);
+  background(20, 0, 80);
+  // photon.update();
+  // photon.show();
+  // let sumX = waves[0].x;
+
+  // update and show waves
+  for (let i = 0; i < forwardWaves.length; i++) {
+    forwardWaves[i].update();
+    backwardWaves[i].update();
+    const linePoints = sumWaves([forwardWaves[i], backwardWaves[i]]);
+    renderWave(forwardWaves[i].color, linePoints);
+    // forwardWaves[i].show();
+  }
+  let intensity = sumWaves([...forwardWaves, ...backwardWaves]);
+  // intensity = sumWaves(forwardWaves);
   renderWave(color(255, 255, 255), intensity);
 }
