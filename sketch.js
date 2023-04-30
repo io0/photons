@@ -1,3 +1,12 @@
+let photon;
+let waves;
+let forwardWaves = [];
+let backwardWaves = [];
+let N = 12;
+let velocity = 0.1;
+let d, wf, w0;
+let maxFreq = 0.015;
+let Nfundamental = 5;
 renderWave = (color, linePoints) => {
   noFill();
   stroke(color);
@@ -8,9 +17,21 @@ renderWave = (color, linePoints) => {
   }
   endShape();
 };
+function drawComb(waves) {
+  for (let i = 0; i < waves.length; i++) {
+    let w = waves[i].w * 50000;
+    console.log({ w });
+    stroke(waves[i].color);
+    strokeWeight(1);
+    // beginShape();
+    line(w, 0, w, 10);
+    // endShape();
+  }
+}
 
 // Define a function called "frequencyToRgb" that takes an unscaled frequency as a parameter
-function frequencyToRgb(frequency) {
+function frequencyToRgb(w, maxFrequency = 0.02) {
+  let frequency = Math.min(w, maxFrequency) / maxFrequency;
   // Calculate the RGB values using the sine function
   var red = Math.sin(frequency * 2 * Math.PI);
   var green = Math.sin(frequency * 2 * Math.PI + (2 * Math.PI) / 3);
@@ -25,14 +46,29 @@ function frequencyToRgb(frequency) {
   return color(r, g, b);
 }
 
-function frequencyToPastelRgb(frequency) {
-  var red = Math.sin(frequency * 2 * Math.PI) * 0.5 + 0.5;
-  var green = Math.sin(frequency * 2 * Math.PI + (2 * Math.PI) / 3) * 0.5 + 0.5;
-  var blue = Math.sin(frequency * 2 * Math.PI + (4 * Math.PI) / 3) * 0.5 + 0.5;
+function frequencyToPastelRgb(w) {
+  let frequency = Math.min(w, maxFreq) / maxFreq;
+  frequency = frequency * 0.9 + 0.1;
+  // frequency = Math.min(frequency, 0.95);
+  // let frequency = 0.01;
 
-  var r = Math.round(red * 155 + 100);
-  var g = Math.round(green * 155 + 100);
-  var b = Math.round(blue * 155 + 100);
+  var red = Math.sin(frequency * 2 * Math.PI) * 0.5 + 0.5;
+  var blue = Math.sin(frequency * 2 * Math.PI + (2 * Math.PI) / 3) * 0.5 + 0.5;
+  var green = Math.sin(frequency * 2 * Math.PI + (4 * Math.PI) / 3) * 0.5 + 0.5;
+
+  // var red = Math.max(Math.sin(frequency * 2 * Math.PI), 0);
+  // var blue = Math.max(Math.sin(frequency * 2 * Math.PI + (3 * Math.PI) / 3), 0);
+  // var green = Math.max(
+  //   Math.sin(frequency * 2 * Math.PI + (4 * Math.PI) / 3),
+  //   0
+  // );
+
+  var r = Math.round(red * 200 + 50);
+  var g = Math.round(green * 200 + 50);
+  var b = Math.round(blue * 200 + 50);
+  // var r = Math.round(red * 255);
+  // var g = Math.round(green * 255);
+  // var b = Math.round(blue * 255);
 
   return color(r, g, b);
 }
@@ -65,22 +101,21 @@ class Wave {
     this.startPos = startPos;
     this.amplitude = amplitude;
     this.t = 0;
-    this.highestFrequency = highestFrequency;
     // a color between pink and blue depending on the wavelength
-    this.color = frequencyToPastelRgb(w / highestFrequency);
+    this.color = frequencyToPastelRgb(w);
     // this.color
   }
   setFrequency(w) {
     this.w = w;
     this.k = w / this.velocity;
-    this.color = frequencyToPastelRgb(w / this.highestFrequency);
+    this.color = frequencyToPastelRgb(w);
   }
   update() {
     this.t += deltaTime;
     // console.log(this.t)
     this.linePoints = this.x.map((x) => {
       let y =
-        Math.sin(this.k * x - this.w * this.t) * this.amplitude + this.startPos;
+        Math.cos(this.k * x - this.w * this.t) * this.amplitude + this.startPos;
       return createVector(x, y);
     });
   }
@@ -143,35 +178,28 @@ class Photon {
   }
 }
 
-let photon;
-let waves;
-let forwardWaves = [];
-let backwardWaves = [];
-let N = 8;
-let velocity = 0.2;
-let d, wf, w0;
-let maxFreq = 0.02;
-let Nfundamental = 2;
-
 // add a button to increment the central frequency
 function incrementCentralFreq() {
   Nfundamental += 1;
   w0 = Nfundamental * wf;
 
-  for (let i = 0; i < waves.length; i++) {
-    waves[i].setFrequency(i * wf + w0);
+  for (let i = 0; i < forwardWaves.length; i++) {
+    forwardWaves[i].setFrequency(i * wf + w0);
+    backwardWaves[i].setFrequency(i * wf + w0);
   }
 }
 
 function decrementCentralFreq() {
   Nfundamental -= 1;
   w0 = Nfundamental * wf;
-  for (let i = 0; i < waves.length; i++) {
-    waves[i].setFrequency(i * wf + w0);
+  for (let i = 0; i < forwardWaves.length; i++) {
+    forwardWaves[i].setFrequency(i * wf + w0);
+    backwardWaves[i].setFrequency(i * wf + w0);
   }
 }
 
 let slider = document.getElementById("myRange");
+let cavityLength = document.getElementById("line");
 function changeCavityLength() {
   // slider to change the cavity length
   d = slider.value;
@@ -181,6 +209,7 @@ function changeCavityLength() {
     forwardWaves[i].setFrequency(i * wf + w0);
     backwardWaves[i].setFrequency(i * wf + w0);
   }
+  cavityLength.style.width = slider.value + "px";
 
   console.log({ maxFreq: N * wf + w0 });
 }
@@ -195,7 +224,7 @@ function setup() {
   // create 10 waves
   waves = [];
   console.log({ maxFreq: N * wf });
-  for (let i = -N; i < N; i++) {
+  for (let i = 0; i < N; i++) {
     let forward = new Wave(i * wf + w0, maxFreq, velocity);
     let backward = new Wave(i * wf + w0, maxFreq, -velocity);
     // waves.push({ forward, backward });
@@ -217,6 +246,7 @@ function sumWaves(waves) {
   return linePoints;
 }
 
+let standingWaves = true;
 function draw() {
   // background(255, 255, 255);
   background(20, 0, 80);
@@ -225,14 +255,22 @@ function draw() {
   // let sumX = waves[0].x;
 
   // update and show waves
-  for (let i = 0; i < forwardWaves.length; i++) {
+  for (let n = 0; n < forwardWaves.length; n++) {
+    let i = forwardWaves.length - n - 1;
     forwardWaves[i].update();
     backwardWaves[i].update();
-    const linePoints = sumWaves([forwardWaves[i], backwardWaves[i]]);
-    renderWave(forwardWaves[i].color, linePoints);
-    // forwardWaves[i].show();
+    if (standingWaves) {
+      const linePoints = sumWaves([forwardWaves[i], backwardWaves[i]]);
+      renderWave(forwardWaves[i].color, linePoints);
+    } else {
+      forwardWaves[i].show();
+    }
   }
-  let intensity = sumWaves([...forwardWaves, ...backwardWaves]);
-  // intensity = sumWaves(forwardWaves);
+  if (standingWaves) {
+    intensity = sumWaves([...forwardWaves, ...backwardWaves]);
+  } else {
+    intensity = sumWaves(forwardWaves);
+  }
+  drawComb(forwardWaves);
   renderWave(color(255, 255, 255), intensity);
 }
