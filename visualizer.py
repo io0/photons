@@ -48,6 +48,15 @@ def get_data():
     arr = np.array(bytes_to_int(data))
     return arr
 
+# continuously sniff packets, update buffer
+current_buffer = np.zeros(64)
+def update_buffer(packet):
+    global current_buffer
+    data = packet[Raw].load
+    current_buffer = np.array(bytes_to_int(data))
+
+t = AsyncSniffer(iface="Ethernet 3", count=0, store=0, prn=update_buffer)
+t.start()
 
 transform = Trackball(Position())
 viewport = Viewport()
@@ -68,9 +77,10 @@ def on_draw(dt):
     global t, paths
     window.clear()
     # ydata = generate_exponential()
-    ydata = get_data()
+    # ydata = get_data()
+    ydata = current_buffer
     path = np.array([xdata, ydata, zdata]).T
-    if (t > 40):
+    if (len(all_paths)> 40):
         all_paths.pop(0)
     all_paths.append(path)
     t += 1
